@@ -37,7 +37,6 @@ def destroy(routes, fraction=0.25):
 # --------------------------------------------------
 # GREEDY REPAIR OPERATOR
 # --------------------------------------------------
-
 def greedy_repair(routes, removed, problem, shortest):
     """
     Reinsert removed cities in the cheapest position
@@ -54,24 +53,35 @@ def greedy_repair(routes, removed, problem, shortest):
         for i in range(len(routes) + 1): # second FOR loop
 
             if i == len(routes):
-                # we reached end of possible r
-                trial_routes = routes + [[city]] 
-                # try putting it in a new route
+                # we reached end of possible r --> CREATE A NEW ROUTE
+                trial_routes_partial = routes + [[city]] # temporarily create a new route with that city
+
+                trial_routes_full = repair_routes(trial_routes_partial, nodes)
+                # create a temporary full version with repair routes (the other removed notes are put to their own separate routes)
+                # we separate full and partial to avoid city duplicates --> repair routes will insert other 'removed' nodes
+                cost = routes_cost(trial_routes_full, problem, shortest)
+                
+                # Check if best
+                if cost < best_cost:
+                    best_cost = cost
+                    best_routes = trial_routes_partial
 
             else:
+                # INSERT INTO EXISTING ROUTE
                 for pos in range(len(routes[i]) + 1): # third FOR loop
                     # check which position in said route is the best one to insert the city in
                     trial = routes[i][:pos] + [city] + routes[i][pos:] # temporarily insert in a position
-                    trial_routes = routes[:i] + [trial] + routes[i + 1 :]
+                    trial_routes_partial = routes[:i] + [trial] + routes[i + 1 :]
+                    # create trial instertion into a route
 
-                    trial_routes = repair_routes(trial_routes, nodes) 
-                    # the other removed notes are put to their own separate routes
-                    cost = routes_cost(trial_routes, problem, shortest)
+                    trial_routes_full = repair_routes(trial_routes_partial, nodes)
+                    # same as previous case
+                    cost = routes_cost(trial_routes_full, problem, shortest)
 
                     if cost < best_cost: 
                         # check if it's best insertion up to now for pos
                         best_cost = cost
-                        best_routes = trial_routes
+                        best_routes = trial_routes_partial
 
         if best_routes is not None: 
             # the algorithm found a better route
