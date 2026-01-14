@@ -8,11 +8,13 @@ import csv
 
 from Problem import Problem
 from s349370 import Solver
+from src.solver import solve
 
 results = []
 
 
 def compute_solution_cost(problem, path):
+    # compute the cost of the solution as per problem definition
     shortest = dict(
         nx.all_pairs_dijkstra_path_length(problem.graph, weight="dist")
     )
@@ -57,7 +59,7 @@ def run_test(num_cities, density, alpha, beta, seed):
     # BASELINE
     # --------------------------------------------------
     t0 = time.time()
-    baseline_path = problem.solve()
+    baseline_path = solve(problem)
     t_baseline = time.time() - t0
     baseline_cost = compute_solution_cost(problem, baseline_path)
 
@@ -78,9 +80,9 @@ def run_test(num_cities, density, alpha, beta, seed):
         f"ILS:      cost={ils_cost:.2f}, time={t_ils:.2f}s, impr={impr_ils:.2f}%"
     )
 
-    # --------------------------------------------------
-    # ILS + LNS (only meaningful for larger instances)
-    # --------------------------------------------------
+    # ------------------------------------------------------------
+    # ILS + LNS (only meaningful for larger instances, >50 cities)
+    # ------------------------------------------------------------
     num_cities = len(problem.graph.nodes) - 1
 
     if num_cities >= 50:

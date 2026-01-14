@@ -4,6 +4,7 @@ import random
 def build_path_from_routes(routes, problem, shortest):
     """
     Convert routes into the final path format required by the assignment.
+    eg. from [[1, 2], [3, 4, 5]] to [(1, gold_1), (2, gold_2), (0, 0)...]
     """
     path = []
     for route in routes:
@@ -17,6 +18,7 @@ def build_path_from_routes(routes, problem, shortest):
 def routes_cost(routes, problem, shortest):
     """
     Compute total cost of a solution represented as multiple routes.
+    FITNESS FUNCTION: minimizing total cost (lower is better)
     """
     total = 0.0
 
@@ -48,6 +50,7 @@ def move_city(routes):
     if len(routes) < 2:
         return routes
 
+    # randomly
     r1, r2 = random.sample(range(len(routes)), 2)
     city = random.choice(routes[r1])
     routes[r1].remove(city)
@@ -62,6 +65,8 @@ def move_city(routes):
 def swap_cities(routes):
     """
     Swap two cities inside the same route.
+    Visiting heavy city -> light city might be cheaper than 
+    light -> heavy (or vice-versa)
     """
     routes = [r[:] for r in routes if len(r) > 1]
     if not routes:
@@ -76,6 +81,8 @@ def swap_cities(routes):
 def split_route(routes):
     """
     Split a long route into two.
+    If a route gets too heavy, the drag penalty becomes too much, and increasing
+    total distance to reduce load is a necessary trade-off
     """
     routes = [r[:] for r in routes if len(r) > 2]
     if not routes:
@@ -89,7 +96,10 @@ def split_route(routes):
     return routes
 
 def repair_routes(routes, nodes):
-    """Ensure all cities appear at least once."""
+    """Ensure all cities appear at least once
+    check for missing cities e.g., if a "destroy" operator 
+    removed them and didn't put them back, and add them to a dedicated route for them
+    """
     present = set()
     for r in routes:
         present.update(r)
