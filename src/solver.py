@@ -47,7 +47,7 @@ def solve(problem, use_lns=False):
     # always start with ILS
     best_routes = ils(problem, shortest)
 
-    # Optionally refine with LNS (for larger instances)
+    # optionally refine with LNS (for larger instances)
     if use_lns:
         best_routes = lns(
             problem,
