@@ -14,7 +14,7 @@ from .utils import (
 def ils(problem, shortest, max_iter=300):
     nodes = [n for n in problem.graph.nodes if n != 0]
 
-    # start with one city per route
+    # start with one city per route  --> baseline solution
     routes = [[n] for n in nodes]
     random.shuffle(routes)
 
@@ -22,6 +22,12 @@ def ils(problem, shortest, max_iter=300):
     best_cost = routes_cost(best_routes, problem, shortest)
 
     for _ in range(max_iter):
+        # three random mutations: 
+        # 1. move: take a city from one route and put it in another
+        # 2. swap: swap two cities in the same route
+        # 3. split: cut a route into two (creating a new return-to-depot). 
+        #   --> if a move reduces the cost (Profit - LoadPenalty), it keeps it
+        
         op = random.choice([move_city, swap_cities, split_route])
         candidate = op(best_routes)
         candidate = repair_routes(candidate, nodes)
@@ -38,10 +44,10 @@ def solve(problem, use_lns=False):
         nx.all_pairs_dijkstra_path_length(problem.graph, weight="dist")
     )
 
-    # Always start with ILS
+    # always start with ILS
     best_routes = ils(problem, shortest)
 
-    # Optionally refine with LNS
+    # optionally refine with LNS (for larger instances)
     if use_lns:
         best_routes = lns(
             problem,
