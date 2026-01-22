@@ -203,6 +203,8 @@ if __name__ == "__main__":
     density_values = [0.2, 0.5, 1.0]
     seed = 42
 
+    results = []
+
 
     for n in n_cities:
         for density in density_values:
