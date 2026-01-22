@@ -11,7 +11,6 @@ from Problem import Problem
 from s349370 import Solver
 from src.solver import solve
 
-results = []
 
 
 def compute_solution_cost(problem, path):
@@ -37,9 +36,52 @@ def compute_solution_cost(problem, path):
 
     return total_cost
 
+def debug_gold_conservation_path(path, problem):
+    """
+    Check that total gold collected from each city equals the city's gold.
+    Works on final path: [(node, gold), ...]
+    """
+    collected = {n: 0.0 for n in problem.graph.nodes if n != 0}
+
+    for node, gold in path:
+        if node != 0:
+            collected[node] += gold
+
+    ok = True
+    for n, collected_gold in collected.items():
+        real_gold = problem.graph.nodes[n]["gold"]
+        if abs(collected_gold - real_gold) > 1e-6:
+            print(
+                f"Gold mismatch at city {n}: "
+                f"collected={collected_gold:.6f}, real={real_gold:.6f}"
+            )
+            ok = False
+
+
+def debug_path_feasibility(path, problem):
+    """
+    Verify that every movement in the solution path is feasible in the graph.
+    """
+    G = problem.graph
+    current = 0
+
+    for step, (next_node, _) in enumerate(path):
+        if not nx.has_path(G, current, next_node):
+            raise ValueError(
+                f"Infeasible path at step {step}: "
+                f"{current} → {next_node} does not exist in graph"
+            )
+        current = next_node
+
 
 def run_test(num_cities, density, alpha, beta, seed):
+    test_results = []
 
+    print("=" * 70)
+    print(
+        f"Test config: N={num_cities}, density={density}, "
+        f"alpha={alpha}, beta={beta}, seed={seed}"
+    )
 
     random.seed(seed)
     np.random.seed(seed)
@@ -60,8 +102,6 @@ def run_test(num_cities, density, alpha, beta, seed):
     t_baseline = time.time() - t0
     baseline_cost = compute_solution_cost(problem, baseline_path)
 
-
-
     # --------------------------------------------------
     # ILS ONLY
     # --------------------------------------------------
@@ -78,7 +118,9 @@ def run_test(num_cities, density, alpha, beta, seed):
     #)
 
     print(f"{ils_path}\n")
-
+    
+    debug_gold_conservation_path(ils_path, problem)
+    debug_path_feasibility(ils_path, problem)
     # ------------------------------------------------------------
     # ILS + LNS (only meaningful for larger instances, >50 cities)
     # ------------------------------------------------------------
@@ -92,94 +134,66 @@ def run_test(num_cities, density, alpha, beta, seed):
         lns_cost = compute_solution_cost(problem, lns_path)
 
         impr_lns = 100.0 * (baseline_cost - lns_cost) / baseline_cost
+        debug_gold_conservation_path(lns_path,problem)
+        debug_path_feasibility(lns_path,problem)
+        print(
+            f"ILS+LNS:  cost={lns_cost:.2f}, time={t_lns:.2f}s, impr={impr_lns:.2f}%"
+        )
 
         #print(
         #    f"ILS+LNS:  cost={lns_cost:.2f}, time={t_lns:.2f}s, impr={impr_lns:.2f}%"
         #)
     
-    row = {
-        "N": num_cities,
+    
+
+    test_results.append({
+        "n_cities": n,
         "density": density,
         "alpha": alpha,
         "beta": beta,
         "baseline_cost": baseline_cost,
         "ils_cost": ils_cost,
-        "ils_time": t_ils,
-        "ils_impr_pct": impr_ils,
-    }
+        "improvement": (baseline_cost - ils_cost) / baseline_cost if baseline_cost > 0 else 0.0
+    })
+    return test_results
 
-    if num_cities >= 50:
+def export_summary_csv(results, group_keys):
+    """
+    Save aggregated results grouped by group_keys into a CSV file.
+    """
+
+    if filename is None:
+        filename = "summary_by_" + "_".join(group_keys) + ".csv"
+
+    grouped = defaultdict(list)
+
+    for r in results:
+        key = tuple(r[k] for k in group_keys)
+        grouped[key].append(r)
+
+    rows = []
+
+    for key, items in grouped.items():
+        avg_baseline = sum(i["baseline_cost"] for i in items) / len(items)
+        avg_ils = sum(i["ils_cost"] for i in items) / len(items)
+        avg_impr = sum(i["improvement"] for i in items) / len(items)
+
+        row = dict(zip(group_keys, key))
         row.update({
-            "lns_cost": lns_cost,
-            "lns_time": t_lns,
-            "lns_impr_pct": impr_lns,
+            "avg_baseline_cost": avg_baseline,
+            "avg_ils_cost": avg_ils,
+            "avg_improvement_pct": avg_impr,
+            "num_instances": len(items)
         })
 
-    results.append(row)
-
-
-
-
-def export_summary_by_alpha(results, filename="summary_by_alpha.csv"):
-    bucket = defaultdict(list)
-
-    for r in results:
-        if "lns_impr_pct" in r:
-            bucket[r["alpha"]].append(r["lns_impr_pct"])
-        else:
-            bucket[r["alpha"]].append(r["ils_impr_pct"])
-
-    rows = []
-    for alpha in sorted(bucket):
-        vals = bucket[alpha]
-        rows.append({
-            "alpha": alpha,
-            "mean_improvement_pct": statistics.mean(vals),
-            "median_improvement_pct": statistics.median(vals),
-            "num_instances": len(vals),
-        })
+        rows.append(row)
 
     with open(filename, "w", newline="") as f:
-        writer = csv.DictWriter(
-            f, fieldnames=rows[0].keys()
-        )
+        writer = csv.DictWriter(f, fieldnames=rows[0].keys())
         writer.writeheader()
         writer.writerows(rows)
 
-def export_summary_by_beta(results, filename="summary_by_beta.csv"):
-    bucket = defaultdict(list)
 
-    for r in results:
-        if "lns_impr_pct" in r:
-            bucket[r["beta"]].append(r["lns_impr_pct"])
-        else:
-            bucket[r["beta"]].append(r["ils_impr_pct"])
-
-    rows = []
-    for beta in sorted(bucket):
-        vals = bucket[beta]
-        rows.append({
-            "beta": beta,
-            "mean_improvement_pct": statistics.mean(vals),
-            "median_improvement_pct": statistics.median(vals),
-            "num_instances": len(vals),
-        })
-
-    with open(filename, "w", newline="") as f:
-        writer = csv.DictWriter(
-            f, fieldnames=rows[0].keys()
-        )
-        writer.writeheader()
-        writer.writerows(rows)
-
-    print(f"Summary by beta saved to {filename}")
-
-
-def export_results_csv(results, filename="comparison_results.csv"):
-    with open(filename, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=results[0].keys())
-        writer.writeheader()
-        writer.writerows(results)
 
 if __name__ == "__main__":
 
@@ -189,12 +203,17 @@ if __name__ == "__main__":
     density_values = [0.2, 0.5, 1.0]
     seed = 42
 
+
     for n in n_cities:
         for density in density_values:
             for alpha in alpha_values:
                 for beta in beta_values:
-                    run_test(n, density, alpha, beta, seed)
+                    results.append(run_test(n, density, alpha, beta, seed))
+   
+    flat_results = [r for sublist in results for r in sublist] # for easier printing
+    export_summary_csv(flat_results, ("beta",))
+    export_summary_csv(flat_results, ("alpha",))
+    export_summary_csv(flat_results, ("n_cities",))
+    export_summary_csv(flat_results, ("density",))
 
-    export_results_csv(results)
-    export_summary_by_alpha(results)
-    export_summary_by_beta(results)
+    export_summary_csv(flat_results, ("n_cities", "alpha", "beta"))
