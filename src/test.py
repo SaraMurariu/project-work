@@ -3,12 +3,11 @@ import random
 import numpy as np
 import networkx as nx
 from collections import defaultdict
-import statistics
 import csv
 
 
 from Problem import Problem
-from s349370 import Solver
+from s349370 import solution
 from src.solver import solve
 
 
@@ -105,9 +104,8 @@ def run_test(num_cities, density, alpha, beta, seed):
     # --------------------------------------------------
     # ILS ONLY
     # --------------------------------------------------
-    pw_ils = Solver(problem)
     t0 = time.time()
-    ils_path = pw_ils.solution(use_lns=False)
+    ils_path = solution(problem)
     t_ils = time.time() - t0
     ils_cost = compute_solution_cost(problem, ils_path)
 
@@ -127,9 +125,8 @@ def run_test(num_cities, density, alpha, beta, seed):
     num_cities = len(problem.graph.nodes) - 1
 
     if num_cities >= 50:
-        pw_lns = Solver(problem)
         t0 = time.time()
-        lns_path = pw_lns.solution(use_lns=True)
+        lns_path = solution(problem)
         t_lns = time.time() - t0
         lns_cost = compute_solution_cost(problem, lns_path)
 
@@ -153,7 +150,7 @@ def run_test(num_cities, density, alpha, beta, seed):
         "beta": beta,
         "baseline_cost": baseline_cost,
         "ils_cost": ils_cost,
-        "improvement": (baseline_cost - ils_cost) / baseline_cost if baseline_cost > 0 else 0.0
+        "improvement": (baseline_cost - ils_cost) / baseline_cost if baseline_cost > 0 else 0.0,
     })
     return test_results
 

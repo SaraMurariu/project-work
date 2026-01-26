@@ -98,7 +98,7 @@ def ils(problem, shortest, max_iter=300, city_max_load=None):
 
     return best_routes
 
-def solve(problem, use_lns=False):
+def solve(problem):
     shortest = dict(
         nx.all_pairs_dijkstra_path_length(problem.graph, weight="dist")
     )
@@ -107,8 +107,9 @@ def solve(problem, use_lns=False):
     best_routes = ils(problem, shortest)
     city_max_loads = compute_city_max_loads(problem)
 
+    num_nodes = len(problem.graph.nodes) - 1
     # Optionally refine with LNS
-    if use_lns:
+    if num_nodes >= 50:
         best_routes = lns_virtual(
             problem,
             shortest,
