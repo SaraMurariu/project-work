@@ -8,7 +8,7 @@ import csv
 
 
 from Problem import Problem
-from s348365 import solution
+from s349370 import solution
 from src.solver import solve
 from .utils import fix_edge
 
